@@ -31,12 +31,98 @@ const oauthClient = new OAuthClient({
   redirectUri: process.env.QBO_REDIRECT_URI || `http://localhost:${PORT}/callback`,
 });
 
+const PAGE_STYLE = `
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 640px;
+      margin: 60px auto;
+      padding: 0 24px;
+      color: #1a1a1a;
+      background: #fafafa;
+    }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+    .card {
+      background: white;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card.disabled { opacity: 0.5; }
+    .step-label { font-weight: 600; font-size: 15px; }
+    .step-hint { color: #888; font-size: 13px; margin-top: 2px; }
+    a.btn, button.btn {
+      background: #2CA01C;
+      color: white;
+      text-decoration: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    a.btn.secondary { background: #f0f0f0; color: #333; }
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .status.connected { background: #e6f4ea; color: #1e7e34; }
+    .status.not-connected { background: #fdecea; color: #b3261e; }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+`;
+
 app.get('/', (req, res) => {
+  const connected = !!tokenStore;
   res.send(`
-    <h2>QuickBooks Online API Demo</h2>
-    <p><a href="/auth">1. Connect to QuickBooks Online (sandbox)</a></p>
-    <p><a href="/report/pl">2. Pull Profit &amp; Loss report</a> (after connecting)</p>
-    <p><a href="/refresh">3. Force a token refresh</a> (after connecting)</p>
+    ${PAGE_STYLE}
+    <h1>QuickBooks Online API Demo</h1>
+    <div class="subtitle">OAuth2 + Accounting API against the Intuit sandbox</div>
+    <span class="status ${connected ? 'connected' : 'not-connected'}">
+      ${connected ? '● Connected to sandbox company ' + tokenStore.realmId : '○ Not connected'}
+    </span>
+
+    <div class="card">
+      <div>
+        <div class="step-label">1. Connect to QuickBooks Online</div>
+        <div class="step-hint">Runs the OAuth2 authorization flow against the sandbox</div>
+      </div>
+      <a class="btn" href="/auth">${connected ? 'Reconnect' : 'Connect'}</a>
+    </div>
+
+    <div class="card ${connected ? '' : 'disabled'}">
+      <div>
+        <div class="step-label">2. Pull Profit &amp; Loss report</div>
+        <div class="step-hint">Live Accounting API call against sandbox data</div>
+      </div>
+      <a class="btn ${connected ? '' : 'secondary'}" href="/report/pl">Pull report</a>
+    </div>
+
+    <div class="card ${connected ? '' : 'disabled'}">
+      <div>
+        <div class="step-label">3. Force a token refresh</div>
+        <div class="step-hint">Demonstrates the refresh-token exchange</div>
+      </div>
+      <a class="btn ${connected ? '' : 'secondary'}" href="/refresh">Refresh</a>
+    </div>
   `);
 });
 
@@ -58,18 +144,24 @@ app.get('/callback', async (req, res) => {
     tokenStore.realmId = realmId;
 
     res.send(`
-      <p>Connected. Realm (sandbox company) ID: ${realmId}</p>
-      <p><a href="/report/pl">Pull P&amp;L report</a></p>
+      ${PAGE_STYLE}
+      <h1>Connected ✅</h1>
+      <div class="subtitle">Realm (sandbox company) ID: ${realmId}</div>
+      <div class="card">
+        <div class="step-label">Pull a live report now?</div>
+        <a class="btn" href="/report/pl">Pull P&amp;L report</a>
+      </div>
+      <p><a href="/">&larr; Back to home</a></p>
     `);
   } catch (err) {
     console.error('Token exchange failed:', err);
-    res.status(500).send('OAuth token exchange failed — check server logs.');
+    res.status(500).send(`${PAGE_STYLE}<h1>OAuth exchange failed</h1><p>Check server logs for details.</p><p><a href="/">&larr; Back to home</a></p>`);
   }
 });
 
 // Step 3: use the access token to call the Accounting API
 app.get('/report/pl', async (req, res) => {
-  if (!tokenStore) return res.status(401).send('Not connected. Visit /auth first.');
+  if (!tokenStore) return res.status(401).send(`${PAGE_STYLE}<h1>Not connected</h1><p>Connect first.</p><p><a href="/">&larr; Back to home</a></p>`);
 
   // Refresh proactively if the access token is likely expired (demo simplification;
   // production code should track exact expiry timestamps, not just re-check every call).
@@ -93,20 +185,26 @@ app.get('/report/pl', async (req, res) => {
       console.error('Report pull failed:', err);
       return res.status(500).json({ error: 'Failed to pull P&L report', details: err });
     }
-    res.json(report);
+    res.send(`
+      ${PAGE_STYLE}
+      <h1>Profit &amp; Loss report</h1>
+      <div class="subtitle">Pulled live from the sandbox Accounting API</div>
+      <p><a href="/">&larr; Back to home</a></p>
+      <pre>${JSON.stringify(report, null, 2)}</pre>
+    `);
   });
 });
 
 // Step 4: demonstrate the refresh-token flow explicitly
 app.get('/refresh', async (req, res) => {
-  if (!tokenStore) return res.status(401).send('Not connected. Visit /auth first.');
+  if (!tokenStore) return res.status(401).send(`${PAGE_STYLE}<h1>Not connected</h1><p>Connect first.</p><p><a href="/">&larr; Back to home</a></p>`);
   try {
     const refreshed = await oauthClient.refresh();
     tokenStore = { ...tokenStore, ...refreshed.getJson() };
-    res.send('Token refreshed successfully.');
+    res.send(`${PAGE_STYLE}<h1>Token refreshed ✅</h1><p><a href="/">&larr; Back to home</a></p>`);
   } catch (err) {
     console.error('Refresh failed:', err);
-    res.status(500).send('Refresh failed — refresh token may be expired (100 days in sandbox).');
+    res.status(500).send(`${PAGE_STYLE}<h1>Refresh failed</h1><p>Refresh token may be expired (100 days in sandbox).</p><p><a href="/">&larr; Back to home</a></p>`);
   }
 });
 

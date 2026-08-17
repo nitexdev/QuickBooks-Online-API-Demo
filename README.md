@@ -72,5 +72,13 @@ Node.js, Express, `intuit-oauth` (Intuit's official OAuth2 client),
 
 
 output sample:
-<img width="1208" height="15371" alt="localhost_3000_report_pl" src="https://github.com/user-attachments/assets/4f48d993-663d-413b-b422-49ca2ef16929" />
+
+<img width="920" height="889" alt="Capture" src="https://github.com/user-attachments/assets/d4d800d1-0e50-4655-9f27-7764c778fa6a" />
+
+
+<img width="995" height="882" alt="Capture2" src="https://github.com/user-attachments/assets/7fc698bb-209c-4857-ab2f-44546c2b629d" />
+
+<img width="974" height="895" alt="Capture3" src="https://github.com/user-attachments/assets/60ceb08c-e882-4532-bc50-c70a4243b968" />
+
+
 

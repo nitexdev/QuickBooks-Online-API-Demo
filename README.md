@@ -71,6 +71,7 @@ Node.js, Express, `intuit-oauth` (Intuit's official OAuth2 client),
 `node-quickbooks` (Accounting API wrapper).
 
 homepage:
+
 <img width="891" height="426" alt="Capture0" src="https://github.com/user-attachments/assets/512384f2-6b0b-4c1d-8653-6644b5d0feae" />
 
 

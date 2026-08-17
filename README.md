@@ -69,3 +69,8 @@ gaps to close would include:
 
 Node.js, Express, `intuit-oauth` (Intuit's official OAuth2 client),
 `node-quickbooks` (Accounting API wrapper).
+
+
+output sample:
+<img width="1208" height="15371" alt="localhost_3000_report_pl" src="https://github.com/user-attachments/assets/4f48d993-663d-413b-b422-49ca2ef16929" />
+
